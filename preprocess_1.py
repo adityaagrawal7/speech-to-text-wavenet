@@ -66,7 +66,7 @@ def process_vctk(csv_file):
 
 def process_commonvoice(csv_file, category):
 
-    parent_path = _data_path + 'cv_corpus_v1/'
+    parent_path = _data_path + 'CommonVoice/'
     labels, wave_files = [], []
 
     # create csv writer
@@ -75,36 +75,26 @@ def process_commonvoice(csv_file, category):
     with open(parent_path+category+'.csv') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader: # filename,text,up_votes,down_votes,age,gender,accent,duration
-            wave_file = parent_path + '/' + row['filename'] + '.wav'
+            wave_file = parent_path + category + '/' + row['filename'] + '.wav'
             wave_files.append(wave_file)
             labels.append(data.str2index(row['text']))
 
     # save results
-    count = 0 
-    f = 0
-    s = 0
     for i, (wave_file, label) in enumerate(zip(wave_files, labels)):
-        try:
-            fn = wave_file.replace('/', '-')
-            target_filename = 'asset/data/preprocess/mfcc/' + fn + '.npy'
-            if os.path.exists( target_filename ):
-                continue
-            # print info
-            print("CommonVoice corpus preprocessing (%d / %d) - '%s']" % (i, len(wave_files), wave_file))
-
-            wave, sr = librosa.load(wave_file, mono=True, sr=None)
-
-            # re-sample ( 48K -> 16K )
-            wave = wave[::3]
-
-            # get mfcc feature
-            mfcc = librosa.feature.mfcc(wave, sr=16000)
-        except Exception, e:
-            f += 1
-            print 'Failed for ', wave_file
+        fn = wave_file.split('/')[-1]
+        target_filename = 'asset/data/preprocess/mfcc/' + fn + '.npy'
+        if os.path.exists( target_filename ):
             continue
-            
-        
+        # print info
+        print("CommonVoice corpus preprocessing (%d / %d) - '%s']" % (i, len(wave_files), wave_file))
+
+        wave, sr = librosa.load(wave_file, mono=True, sr=None)
+
+        # re-sample ( 48K -> 16K )
+        wave = wave[::3]
+
+        # get mfcc feature
+        mfcc = librosa.feature.mfcc(wave, sr=16000)
 
         # save result ( exclude small mfcc data to prevent ctc loss )
         if len(label) < mfcc.shape[1]:
@@ -115,13 +105,6 @@ def process_commonvoice(csv_file, category):
 
             # save mfcc
             np.save(target_filename, mfcc, allow_pickle=False)
-            count+=1
-        else:
-            s+= 1
-    
-    print 'Count : ', str(count) 
-    print 's : ', str(s)
-    print 'f : ', str(f)
 
             
 def process_voxforge(csv_file):
@@ -157,11 +140,11 @@ def process_voxforge(csv_file):
 
     # save results
     count = 0
-    f = 0
-    s = 0
+    failed_mfcc = 0
+    small_files = 0
     for i, (wave_file, label) in enumerate(zip(wave_files, labels)):
         try:
-            fn = wave_file.replace('/', '-')
+            fn = wave_file.split('/')[-1]
             target_filename = 'asset/data/preprocess/mfcc/' + fn + '.npy'
             if os.path.exists( target_filename ):
                 continue
@@ -175,9 +158,9 @@ def process_voxforge(csv_file):
 
             # get mfcc feature
             mfcc = librosa.feature.mfcc(wave, sr=16000)
-        except Exception, e:
-            print 'failed for ', wave_file, e
-            f+=1
+        except:
+            failed_mfcc += 1
+            print 'Failed mfcc ', wave_file
             continue
         
         # save result ( exclude small mfcc data to prevent ctc loss )
@@ -186,13 +169,13 @@ def process_voxforge(csv_file):
             writer.writerow([fn] + label)
             # save mfcc
             np.save(target_filename, mfcc, allow_pickle=False)
-            count+= 1
+            count += 1
         else:
-            s+=1
+            small_files +=1
             
     print 'Count : ', str(count) 
-    print 's : ', str(s)
-    print 'f : ', str(f)
+    print 'failed_mfcc : ', str(failed_mfcc) 
+    print 'small_files : ', str(small_files) 
             
             
 #
@@ -379,7 +362,7 @@ if not os.path.exists('asset/data/preprocess/mfcc'):
 # Run pre-processing for testing
 #
 
-#LibriSpeech corpus for test
+# LibriSpeech corpus for test
 # csv_f = open('asset/data/preprocess/meta/test.csv', 'w')
 # process_libri(csv_f, 'test-clean')
 # csv_f.close()
@@ -389,10 +372,10 @@ if not os.path.exists('asset/data/preprocess/mfcc'):
 # process_ted(csv_f, 'test')
 # csv_f.close()
 
-csv_f = open('asset/data/preprocess/meta/train.csv', 'w')
-process_commonvoice(csv_f, 'cv-valid-train')
-csv_f.close()
-
 # csv_f = open('asset/data/preprocess/meta/train.csv', 'w')
-# process_voxforge(csv_f)
+# process_commonvoice(csv_f, 'cv-valid-train')
 # csv_f.close()
+
+csv_f = open('asset/data/preprocess/meta/train.csv', 'w')
+process_voxforge(csv_f)
+csv_f.close()

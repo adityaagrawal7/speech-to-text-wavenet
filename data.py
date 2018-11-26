@@ -8,7 +8,7 @@ __author__ = 'namju.kim@kakaobrain.com'
 
 
 # default data path
-_data_path = 'asset/data/'
+_data_path = '/mnt/aditya.agrawal/speech-to-text-wavenet/asset/data/'
 
 #
 # vocabulary table
